@@ -28,17 +28,15 @@ private:
 
 bool operator<(const Date& lhs, const Date& rhs)
 {
-   if (lhs.GetYear() < rhs.GetYear()) return true;
-   else if (lhs.GetMonth() < rhs.GetMonth()) return true;
-   else if (lhs.GetDay() < rhs.GetDay()) return true;
-   else return false;
+   return (lhs.GetYear() * 12 * 31 + lhs.GetMonth() * 31 + lhs.GetDay()) <
+   (rhs.GetYear() *12 *31 + rhs.GetMonth() * 31 + rhs.GetDay());
 }
 
 
 std::ostream& operator<<(std::ostream& out, const Date& date)
 {
    out << std::setfill('0');
-   out << std::setw(4) << date.GetYear() << "-" <<  std::setw(4) << date.GetMonth() << "-" << std::setw(4) << date.GetDay();
+   out << std::setw(4) << date.GetYear() << "-" <<  std::setw(2) << date.GetMonth() << "-" << std::setw(2) << date.GetDay();
    return out;
 }
 
@@ -103,14 +101,134 @@ private:
 };
 
 
+void Database::add_event(const Date& date, const std::string& event)
+{
+   this->data[date].insert(event);
+}
+
+
+bool Database::delete_event(const Date& date, const std::string& event)
+{
+   if (this->data.count(date) > 0 && this->data.at(date).count(event) > 0)
+   {
+      this->data.at(date).erase(event);
+      return true;
+   }
+   else
+   {
+      return false;
+   }
+}
+
+
+int Database::delete_date(const Date& date)
+{
+   if (this->data.count(date) > 0)
+   {
+      int result{static_cast<int>(this->data.at(date).size())};
+      this->data.erase(date);
+      return result;
+   }
+   else
+   {
+      return 0;
+   }
+}
+
+
+void Database::find(const Date& date) const
+{
+   if (this->data.count(date) > 0 && !this->data.at(date).empty())
+   {
+      for (const std::string& event : this->data.at(date))
+      {
+         std::cout << event << std::endl;
+      }
+   }
+}
+
+
+void Database::print() const
+{
+   for (const auto& pair : this->data)
+   {
+      for (const std::string& event : pair.second)
+      {
+         std::cout << pair.first << " " << event << std::endl;
+      }
+   }
+}
+
+
 int main()
 {
-   Database db;
-
-   std::string command;
-   while (std::getline(std::cin, command))
+   try
    {
-      
+      Database db;
+
+      std::string command;
+      while (std::getline(std::cin, command))
+      {
+         std::stringstream stream_command{command};
+
+         std::string operation_code;
+         stream_command >> operation_code;
+
+         if ("Add" == operation_code)
+         {
+            std::string str_date;
+            stream_command >> str_date;
+            Date date{parsing_of_date(str_date)};
+            std::string event;
+            stream_command >> event;
+            db.add_event(date, event);
+         }
+         else if ("Print" == operation_code)
+         {
+            db.print();
+         }
+         else if ("Del" == operation_code)
+         {
+            std::string str_date;
+            stream_command >> str_date;
+            Date date{parsing_of_date(str_date)};
+            std::string event;
+            if (!stream_command.eof())
+            {
+               stream_command >> event;
+            }
+            if (event.empty())
+            {
+               std::cout << "Deleted " << db.delete_date(date) << " events" << std::endl;
+            }
+            else
+            {
+               if (db.delete_event(date, event))
+               {
+                  std::cout << "Deleted successfully" << std::endl;
+               }
+               else
+               {
+                  std::cout << "Event not found" << std::endl;
+               }
+            }
+         }
+         else if ("Find" == operation_code)
+         {
+            std::string str_date;
+            stream_command >> str_date;
+            Date date{parsing_of_date(str_date)};
+            db.find(date);
+         }
+         else if ("" != operation_code)
+         {
+            throw std::logic_error("Unknown command: " + operation_code);
+         }
+      }
+   }
+   catch(const std::exception& ex)
+   {
+      std::cout << ex.what() << std::endl;
    }
 
    return 0;
